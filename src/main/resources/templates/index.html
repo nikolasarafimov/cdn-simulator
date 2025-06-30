@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CDN Simulator</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>🌐 CDN Simulator</h1>
+
+    <div class="control-panel">
+      <div class="control-group">
+        <label>Resource to Request:</label>
+        <select id="resourceSelect">
+          <option value="img1">Image 1 (Bali)</option>
+          <option value="img2">Image 2 (Bike)</option>
+          <option value="img3">Image 3 (Dolphins)</option>
+          <option value="img4">Image 4 (Bird)</option>
+          <option value="img5">Image 5 (Tigers)</option>
+          <option value="img6">Image 6 (City)</option>
+          <option value="custom">Custom URL</option>
+        </select>
+
+        <input id="customUrlInput" placeholder="Enter URL here" style="display:none;margin-top:8px; padding:12px 20px;border:2px solid #ddd; border-radius:10px;font-size:16px;">
+      </div>
+
+      <div class="control-group">
+        <label>Edge Server Algorithm:</label>
+        <select id="edgeAlgorithm">
+          <option value="FIFO">FIFO (First In First Out)</option>
+          <option value="LRU">LRU (Least Recently Used)</option>
+          <option value="LFU">LFU (Least Frequently Used)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Replica Server Algorithm:</label>
+        <select id="replicaAlgorithm">
+          <option value="FIFO">FIFO (First In First Out)</option>
+          <option value="LRU">LRU (Least Recently Used)</option>
+          <option value="LFU">LFU (Least Frequently Used)</option>
+        </select>
+      </div>
+
+      <button id="requestBtn" onclick="simulateRequest()">Send Request</button>
+      <button onclick="clearCache()">Clear All Caches</button>
+    </div>
+
+    <div class="network-diagram" id="networkDiagram">
+      <!-- Client -->
+      <div class="server-node client" id="client">
+        <div class="server-icon">
+          <img src="/images/client.png" alt="Client" onerror="this.style.display='none';">
+        </div>
+        <div class="server-name">Client</div>
+        <div class="server-info">Requesting Resource</div>
+      </div>
+
+      <!-- Edge Servers -->
+      <div class="edge-servers-container">
+        <div class="server-node edge-server" id="edgeServer1">
+          <div class="server-icon">
+            <img src="/images/edge.jpg" alt="Edge Server" onerror="this.style.display='none';">
+          </div>
+          <div class="server-name">Edge Server 1</div>
+          <div class="server-info">Cache Size: 2 | Requests: <span id="edge1Requests">0</span></div>
+          <div class="cache-display">
+            <div class="cache-title">Cache (LRU):</div>
+            <div class="cache-items" id="edge1Cache"></div>
+          </div>
+        </div>
+
+        <div class="server-node edge-server" id="edgeServer2">
+          <div class="server-icon">
+            <img src="/images/edge.jpg" alt="Edge Server" onerror="this.style.display='none';">
+          </div>
+          <div class="server-name">Edge Server 2</div>
+          <div class="server-info">Cache Size: 2 | Requests: <span id="edge2Requests">0</span></div>
+          <div class="cache-display">
+            <div class="cache-title">Cache (LRU):</div>
+            <div class="cache-items" id="edge2Cache"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Replica Servers -->
+      <div class="replica-servers-container">
+        <div class="server-node replica-server" id="replicaServer1">
+          <div class="server-icon">
+            <img src="/images/replica.png" alt="Replica Server" onerror="this.style.display='none';">
+          </div>
+          <div class="server-name">Replica Server 1</div>
+          <div class="server-info">Cache Size: 2 | Requests: <span id="replica1Requests">0</span></div>
+          <div class="cache-display">
+            <div class="cache-title">Cache (LRU):</div>
+            <div class="cache-items" id="replica1Cache"></div>
+          </div>
+        </div>
+
+        <div class="server-node replica-server" id="replicaServer2">
+          <div class="server-icon">
+            <img src="/images/replica.png" alt="Replica Server" onerror="this.style.display='none';">
+          </div>
+          <div class="server-name">Replica Server 2</div>
+          <div class="server-info">Cache Size: 2 | Requests: <span id="replica2Requests">0</span></div>
+          <div class="cache-display">
+            <div class="cache-title">Cache (LRU):</div>
+            <div class="cache-items" id="replica2Cache"></div>
+          </div>
+        </div>
+
+        <div class="server-node replica-server" id="replicaServer3">
+          <div class="server-icon">
+            <img src="/images/replica.png" alt="Replica Server" onerror="this.style.display='none';">
+          </div>
+          <div class="server-name">Replica Server 3</div>
+          <div class="server-info">Cache Size: 2 | Requests: <span id="replica3Requests">0</span></div>
+          <div class="cache-display">
+            <div class="cache-title">Cache (LRU):</div>
+            <div class="cache-items" id="replica3Cache"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Origin Server -->
+      <div class="server-node origin-server" id="originServer">
+        <div class="server-icon">
+          <img src="/images/origin.jpg" alt="Origin Server" onerror="this.style.display='none';">
+        </div>
+        <div class="server-name">Origin Server</div>
+        <div class="server-info">Master Resource Store</div>
+        <div class="cache-display">
+          <div class="cache-title">Available Resources:</div>
+          <div class="cache-items">
+            <div class="cache-item">img1</div>
+            <div class="cache-item">img2</div>
+            <div class="cache-item">img3</div>
+            <div class="cache-item">img4</div>
+            <div class="cache-item">img5</div>
+            <div class="cache-item">img6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="resource-display">
+      <div class="resource-title">Requested Resource</div>
+      <div class="resource-content" id="resourceContent">
+        No resource requested yet
+      </div>
+    </div>
+
+    <div class="trace-log">
+      <div class="trace-title">Request Trace Log</div>
+      <div id="traceLog">Ready to simulate requests...</div>
+    </div>
+
+    <div class="stats-panel">
+      <div class="stat-card">
+        <div class="stat-number" id="totalRequests">0</div>
+        <div class="stat-label">Total Requests</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="cacheHits">0</div>
+        <div class="stat-label">Cache Hits</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="cacheMisses">0</div>
+        <div class="stat-label">Cache Misses</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="hitRatio">0%</div>
+        <div class="stat-label">Hit Ratio</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
