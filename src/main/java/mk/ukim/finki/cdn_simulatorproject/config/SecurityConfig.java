@@ -17,7 +17,6 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-
 public class SecurityConfig {
 
     private final PasswordEncoder passwordEncoder;
@@ -33,20 +32,32 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/api/cdn/**").permitAll()
+                        .requestMatchers(
+                                "/",
+                                "/cdn",
+                                "/cdn/**",
+                                "/api/cdn/**",
+                                "/style.css",
+                                "/app.js",
+                                "/images/**",
+                                "/img/**",
+                                "/favicon.ico",
+                                "/error"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .permitAll()
                         .failureUrl("/login?error=BadCredentials")
-                        .defaultSuccessUrl("/", true)
+                        .defaultSuccessUrl("/cdn", true)
                 )
                 .logout(logout -> logout
                         .clearAuthentication(true)
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
-                        .logoutSuccessUrl("/")
+                        .logoutSuccessUrl("/cdn")
                 );
+
         return http.build();
     }
 
@@ -57,6 +68,7 @@ public class SecurityConfig {
                 .password(passwordEncoder.encode("user"))
                 .roles("USER")
                 .build();
+
         return new InMemoryUserDetailsManager(user);
     }
 }
