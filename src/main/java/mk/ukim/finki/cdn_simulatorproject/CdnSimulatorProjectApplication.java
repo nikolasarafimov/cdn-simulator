@@ -10,13 +10,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class CdnSimulatorProjectApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(CdnSimulatorProjectApplication.class, args);
-        System.out.println("CDN simulator has started.");
+        SpringApplication.run(
+                CdnSimulatorProjectApplication.class,
+                args
+        );
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder(10);
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
-
 }

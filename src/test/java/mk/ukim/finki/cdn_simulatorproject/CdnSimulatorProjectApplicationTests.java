@@ -9,5 +9,4 @@ class CdnSimulatorProjectApplicationTests {
     @Test
     void contextLoads() {
     }
-
 }

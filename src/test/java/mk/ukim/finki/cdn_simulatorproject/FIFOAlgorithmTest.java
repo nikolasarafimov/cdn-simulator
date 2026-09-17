@@ -4,25 +4,57 @@ import mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms.FIFOAlgorithm;
 import mk.ukim.finki.cdn_simulatorproject.model.Resource;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class FIFOAlgorithmTest {
+class FIFOAlgorithmTest {
 
     @Test
-    void testFIFOQueueBehavior() {
+    void shouldEvictOldestResourceWhenCapacityIsExceeded() {
         FIFOAlgorithm fifo = new FIFOAlgorithm(2);
 
-        Resource r1 = new Resource("r1", "type", 100,"");
-        Resource r2 = new Resource("r2", "type", 200,"");
-        Resource r3 = new Resource("r3", "type", 300,"");
+        Resource resource1 =
+                new Resource(
+                        "r1",
+                        "image",
+                        100,
+                        "/img/r1.jpg"
+                );
 
-        fifo.putInCache(r1);
-        fifo.putInCache(r2);
-        assertTrue(fifo.isCacheFull(), "Cache should be full after inserting 2 items (capacity=2)");
+        Resource resource2 =
+                new Resource(
+                        "r2",
+                        "image",
+                        200,
+                        "/img/r2.jpg"
+                );
 
-        fifo.putInCache(r3);
-        assertNull(fifo.getResource("r1"), "r1 should have been evicted by FIFO");
-        assertNotNull(fifo.getResource("r2"), "r2 should remain");
-        assertNotNull(fifo.getResource("r3"), "r3 should be added");
+        Resource resource3 =
+                new Resource(
+                        "r3",
+                        "image",
+                        300,
+                        "/img/r3.jpg"
+                );
+
+        fifo.putInCache(resource1);
+        fifo.putInCache(resource2);
+
+        assertTrue(fifo.isCacheFull());
+
+        fifo.putInCache(resource3);
+
+        assertNull(
+                fifo.getResource("r1")
+        );
+
+        assertNotNull(
+                fifo.getResource("r2")
+        );
+
+        assertNotNull(
+                fifo.getResource("r3")
+        );
     }
 }

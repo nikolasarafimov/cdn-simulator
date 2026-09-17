@@ -1,7 +1,6 @@
 package mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms;
 
 import mk.ukim.finki.cdn_simulatorproject.cache.CacheStrategy;
-import mk.ukim.finki.cdn_simulatorproject.cache.CachingAlgorithmType;
 import mk.ukim.finki.cdn_simulatorproject.model.ClientRequest;
 import mk.ukim.finki.cdn_simulatorproject.model.Resource;
 
@@ -11,24 +10,30 @@ import java.util.List;
 import java.util.Map;
 
 public class LRUAlgorithm implements CacheStrategy {
+
     private final int capacity;
     private final LinkedHashMap<String, Resource> lruMap;
-    private CachingAlgorithmType cachingAlgorithmType;
-
 
     public LRUAlgorithm(int capacity) {
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("Cache capacity must be greater than zero.");
+        }
+
         this.capacity = capacity;
-        this.cachingAlgorithmType = CachingAlgorithmType.LRU;
         this.lruMap = new LinkedHashMap<String, Resource>(16, 0.75f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, Resource> eldest) {
-                return size() > capacity;
+                return size() > LRUAlgorithm.this.capacity;
             }
         };
     }
 
     @Override
     public void removeFromCache(ClientRequest clientRequest) {
+        if (clientRequest == null) {
+            return;
+        }
+
         lruMap.remove(clientRequest.getResourceId());
     }
 
@@ -39,8 +44,11 @@ public class LRUAlgorithm implements CacheStrategy {
 
     @Override
     public void putInCache(Resource resource) {
-        String resourceId = resource.getResourceId();
-        lruMap.put(resourceId, resource);
+        if (resource == null || resource.getResourceId() == null) {
+            return;
+        }
+
+        lruMap.put(resource.getResourceId(), resource);
     }
 
     @Override
@@ -55,6 +63,10 @@ public class LRUAlgorithm implements CacheStrategy {
 
     @Override
     public Resource getResource(String resourceId) {
+        if (resourceId == null) {
+            return null;
+        }
+
         return lruMap.get(resourceId);
     }
 }

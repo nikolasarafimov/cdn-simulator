@@ -6,7 +6,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,16 +26,12 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/",
-                                "/cdn",
-                                "/cdn/**",
-                                "/api/cdn/**",
+                                "/login",
                                 "/style.css",
                                 "/app.js",
                                 "/images/**",
@@ -44,18 +39,23 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/error"
                         ).permitAll()
+                        .requestMatchers(
+                                "/cdn",
+                                "/cdn/**",
+                                "/api/cdn/**"
+                        ).authenticated()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .permitAll()
-                        .failureUrl("/login?error=BadCredentials")
-                        .defaultSuccessUrl("/cdn", true)
+                        .failureUrl("/login?error")
+                        .defaultSuccessUrl("/", true)
                 )
                 .logout(logout -> logout
                         .clearAuthentication(true)
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
-                        .logoutSuccessUrl("/cdn")
+                        .logoutSuccessUrl("/login?logout")
                 );
 
         return http.build();

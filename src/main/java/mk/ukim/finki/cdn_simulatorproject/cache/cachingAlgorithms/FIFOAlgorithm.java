@@ -1,32 +1,43 @@
 package mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms;
 
 import mk.ukim.finki.cdn_simulatorproject.cache.CacheStrategy;
-import mk.ukim.finki.cdn_simulatorproject.cache.CachingAlgorithmType;
 import mk.ukim.finki.cdn_simulatorproject.model.ClientRequest;
 import mk.ukim.finki.cdn_simulatorproject.model.Resource;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 
 public class FIFOAlgorithm implements CacheStrategy {
+
     private final int capacity;
     private final Queue<Resource> resourceQueue;
     private final Map<String, Resource> resourceMap;
-    private CachingAlgorithmType cachingAlgorithmType;
 
     public FIFOAlgorithm(int capacity) {
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("Cache capacity must be greater than zero.");
+        }
+
         this.capacity = capacity;
-        this.resourceQueue = new LinkedList<>();
+        this.resourceQueue = new ArrayDeque<>();
         this.resourceMap = new HashMap<>();
-        this.cachingAlgorithmType = CachingAlgorithmType.FIFO;
     }
 
     @Override
     public void removeFromCache(ClientRequest clientRequest) {
+        if (clientRequest == null) {
+            return;
+        }
+
         String resourceId = clientRequest.getResourceId();
-        Resource resource = resourceMap.get(resourceId);
+        Resource resource = resourceMap.remove(resourceId);
+
         if (resource != null) {
             resourceQueue.remove(resource);
-            resourceMap.remove(resourceId);
         }
     }
 
@@ -43,6 +54,10 @@ public class FIFOAlgorithm implements CacheStrategy {
 
     @Override
     public void putInCache(Resource resource) {
+        if (resource == null || resource.getResourceId() == null) {
+            return;
+        }
+
         String resourceId = resource.getResourceId();
 
         if (resourceMap.containsKey(resourceId)) {
@@ -50,9 +65,10 @@ public class FIFOAlgorithm implements CacheStrategy {
         }
 
         if (isCacheFull()) {
-            Resource oldest = resourceQueue.poll();
-            if (oldest != null) {
-                resourceMap.remove(oldest.getResourceId());
+            Resource oldestResource = resourceQueue.poll();
+
+            if (oldestResource != null) {
+                resourceMap.remove(oldestResource.getResourceId());
             }
         }
 

@@ -1,7 +1,14 @@
 package mk.ukim.finki.cdn_simulatorproject.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.Transient;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import mk.ukim.finki.cdn_simulatorproject.cache.CacheStrategy;
 import mk.ukim.finki.cdn_simulatorproject.cache.CachingAlgorithmType;
 import mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms.FIFOAlgorithm;
@@ -13,11 +20,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
+@NoArgsConstructor
 @Entity
 public class EdgeServer {
 
+    private static final int CACHE_CAPACITY = 2;
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String edgeServerId;
 
     @Enumerated(EnumType.STRING)
@@ -25,86 +34,137 @@ public class EdgeServer {
 
     @Transient
     private CacheStrategy cacheStrategy;
+
     @ManyToOne
     private ReplicaServer replicaServer;
+
     private int requestCount;
 
-    public EdgeServer() {}
+    public EdgeServer(
+            String edgeServerId,
+            CacheStrategy cacheStrategy,
+            ReplicaServer replicaServer
+    ) {
+        if (edgeServerId == null || edgeServerId.isBlank()) {
+            throw new IllegalArgumentException("Edge server ID is required.");
+        }
 
-    public EdgeServer(String edgeServerId, CacheStrategy cacheStrategy, ReplicaServer replicaServer){
+        if (cacheStrategy == null) {
+            throw new IllegalArgumentException("Cache strategy is required.");
+        }
+
+        if (replicaServer == null) {
+            throw new IllegalArgumentException("Replica server is required.");
+        }
+
         this.edgeServerId = edgeServerId;
         this.cacheStrategy = cacheStrategy;
+        this.cachingAlgorithmType = resolveAlgorithmType(cacheStrategy);
         this.replicaServer = replicaServer;
     }
 
-    public Resource handleRequest(ClientRequest cr, List<HopDTO> trace){
-        requestCount++;
-        Resource r = cacheStrategy.getResource(cr.getResourceId());
-        boolean hit = r != null;
-
-        trace.add(new HopDTO(edgeServerId,"EDGE",hit,
-                cacheStrategy.snapshot().stream()
-                        .map(Resource::getResourceId)
-                        .toList()));
-
-        if(!hit){
-            r = replicaServer.handleRequest(cr, trace);
-            cacheStrategy.putInCache(r);
+    public Resource handleRequest(
+            ClientRequest clientRequest,
+            List<HopDTO> trace
+    ) {
+        if (clientRequest == null) {
+            throw new IllegalArgumentException("Client request is required.");
         }
-        return r;
+
+        if (trace == null) {
+            throw new IllegalArgumentException("Request trace is required.");
+        }
+
+        ensureCacheStrategyInitialized();
+
+        if (replicaServer == null) {
+            throw new IllegalStateException(
+                    "Edge server is not connected to a replica server."
+            );
+        }
+
+        requestCount++;
+
+        Resource resource =
+                cacheStrategy.getResource(clientRequest.getResourceId());
+
+        boolean hit = resource != null;
+
+        trace.add(
+                new HopDTO(
+                        edgeServerId,
+                        "EDGE",
+                        hit,
+                        cacheStrategy.snapshot()
+                                .stream()
+                                .map(Resource::getResourceId)
+                                .toList()
+                )
+        );
+
+        if (!hit) {
+            resource = replicaServer.handleRequest(clientRequest, trace);
+
+            if (resource != null) {
+                cacheStrategy.putInCache(resource);
+            }
+        }
+
+        return resource;
     }
 
-    public Resource handleRequests(ClientRequest cr){
-        return handleRequest(cr, new ArrayList<>());
+    public Resource handleRequests(ClientRequest clientRequest) {
+        return handleRequest(clientRequest, new ArrayList<>());
     }
 
     @PostLoad
-    public void init() {
-        switch (this.cachingAlgorithmType) {
-            case LRU:
-                this.cacheStrategy = new LRUAlgorithm(2);
-                break;
-            case LFU:
-                this.cacheStrategy = new LFUAlgorithm(2);
-                break;
-            case FIFO:
-                this.cacheStrategy = new FIFOAlgorithm(2);
-                break;
+    public void initCacheStrategy() {
+        ensureCacheStrategyInitialized();
+    }
+
+    private void ensureCacheStrategyInitialized() {
+        if (cacheStrategy != null) {
+            return;
         }
+
+        if (cachingAlgorithmType == null) {
+            throw new IllegalStateException(
+                    "Caching algorithm type is not configured for edge server "
+                            + edgeServerId + "."
+            );
+        }
+
+        cacheStrategy = createCacheStrategy(cachingAlgorithmType);
     }
 
-    public String getEdgeServerId() {
-        return edgeServerId;
+    private static CacheStrategy createCacheStrategy(
+            CachingAlgorithmType algorithmType
+    ) {
+        return switch (algorithmType) {
+            case FIFO -> new FIFOAlgorithm(CACHE_CAPACITY);
+            case LFU -> new LFUAlgorithm(CACHE_CAPACITY);
+            case LRU -> new LRUAlgorithm(CACHE_CAPACITY);
+        };
     }
 
-    public CacheStrategy getCacheStrategy() {
-        return cacheStrategy;
-    }
+    private static CachingAlgorithmType resolveAlgorithmType(
+            CacheStrategy cacheStrategy
+    ) {
+        if (cacheStrategy instanceof FIFOAlgorithm) {
+            return CachingAlgorithmType.FIFO;
+        }
 
-    public ReplicaServer getReplicaServer() {
-        return replicaServer;
-    }
+        if (cacheStrategy instanceof LFUAlgorithm) {
+            return CachingAlgorithmType.LFU;
+        }
 
-    public int getRequestCount() {
-        return requestCount;
-    }
+        if (cacheStrategy instanceof LRUAlgorithm) {
+            return CachingAlgorithmType.LRU;
+        }
 
-    public void setRequestCount(int requestCount) {
-        this.requestCount = requestCount;
-    }
-    public void setEdgeServerId(String edgeServerId) {
-        this.edgeServerId = edgeServerId;
-    }
-
-    public void setCachingAlgorithmType(CachingAlgorithmType cachingAlgorithmType) {
-        this.cachingAlgorithmType = cachingAlgorithmType;
-    }
-
-    public void setCacheStrategy(CacheStrategy cacheStrategy) {
-        this.cacheStrategy = cacheStrategy;
-    }
-
-    public void setReplicaServer(ReplicaServer replicaServer) {
-        this.replicaServer = replicaServer;
+        throw new IllegalArgumentException(
+                "Unsupported cache strategy: "
+                        + cacheStrategy.getClass().getName()
+        );
     }
 }

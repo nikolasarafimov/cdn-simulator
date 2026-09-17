@@ -1,31 +1,38 @@
 package mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms;
 
 import mk.ukim.finki.cdn_simulatorproject.cache.CacheStrategy;
-import mk.ukim.finki.cdn_simulatorproject.cache.CachingAlgorithmType;
 import mk.ukim.finki.cdn_simulatorproject.model.ClientRequest;
 import mk.ukim.finki.cdn_simulatorproject.model.Resource;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class LFUAlgorithm implements CacheStrategy {
+
     private final int capacity;
     private final Map<String, Resource> resourceMap;
     private final Map<String, Integer> frequencies;
-    private CachingAlgorithmType cachingAlgorithmType;
 
     public LFUAlgorithm(int capacity) {
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("Cache capacity must be greater than zero.");
+        }
+
         this.capacity = capacity;
-        this.cachingAlgorithmType = CachingAlgorithmType.LFU;
-        this.resourceMap = new HashMap<>();
-        this.frequencies = new HashMap<>();
+        this.resourceMap = new LinkedHashMap<>();
+        this.frequencies = new LinkedHashMap<>();
     }
 
     @Override
     public void removeFromCache(ClientRequest clientRequest) {
+        if (clientRequest == null) {
+            return;
+        }
+
         String resourceId = clientRequest.getResourceId();
+
         resourceMap.remove(resourceId);
         frequencies.remove(resourceId);
     }
@@ -43,15 +50,19 @@ public class LFUAlgorithm implements CacheStrategy {
 
     @Override
     public void putInCache(Resource resource) {
+        if (resource == null || resource.getResourceId() == null) {
+            return;
+        }
+
         String resourceId = resource.getResourceId();
 
         if (resourceMap.containsKey(resourceId)) {
-            frequencies.put(resourceId, frequencies.get(resourceId) + 1);
+            frequencies.merge(resourceId, 1, Integer::sum);
             return;
         }
 
         if (isCacheFull()) {
-            lfuRemoval();
+            removeLeastFrequentlyUsed();
         }
 
         resourceMap.put(resourceId, resource);
@@ -65,20 +76,35 @@ public class LFUAlgorithm implements CacheStrategy {
 
     @Override
     public Resource getResource(String resourceId) {
-        Resource resource = resourceMap.get(resourceId);
-        if (resource != null) {
-            frequencies.put(resourceId, frequencies.get(resourceId) + 1);
+        if (resourceId == null) {
+            return null;
         }
+
+        Resource resource = resourceMap.get(resourceId);
+
+        if (resource != null) {
+            frequencies.merge(resourceId, 1, Integer::sum);
+        }
+
         return resource;
     }
 
-    private void lfuRemoval() {
-        frequencies.entrySet().stream()
-                .min(Map.Entry.comparingByValue())
-                .ifPresent(entry -> {
-                    String key = entry.getKey();
-                    resourceMap.remove(key);
-                    frequencies.remove(key);
-                });
+    private void removeLeastFrequentlyUsed() {
+        String resourceToRemove = null;
+        int lowestFrequency = Integer.MAX_VALUE;
+
+        for (String resourceId : resourceMap.keySet()) {
+            int frequency = frequencies.getOrDefault(resourceId, 0);
+
+            if (frequency < lowestFrequency) {
+                lowestFrequency = frequency;
+                resourceToRemove = resourceId;
+            }
+        }
+
+        if (resourceToRemove != null) {
+            resourceMap.remove(resourceToRemove);
+            frequencies.remove(resourceToRemove);
+        }
     }
 }

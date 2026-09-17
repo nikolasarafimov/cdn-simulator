@@ -367,3 +367,9 @@ button:disabled {
         align-items: center;
     }
 }
+
+.cache-empty {
+    color: #999;
+    font-size: 12px;
+    font-style: italic;
+}

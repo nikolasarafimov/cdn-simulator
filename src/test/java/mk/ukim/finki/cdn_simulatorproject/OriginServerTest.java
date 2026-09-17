@@ -6,15 +6,37 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class OriginServerTest {
+class OriginServerTest {
 
     @Test
-    void testGetResourceFromOriginServer() {
+    void shouldReturnExistingResource() {
         OriginServer originServer = new OriginServer();
-        Resource resource = originServer.getResourceFromOriginServer("resourceNum1");
-        assertNotNull(resource, "resourceNum1 is predefined, it should be found");
-        assertEquals("resourceNum1", resource.getResourceId());
+
+        Resource resource =
+                originServer.getResourceFromOriginServer("img1");
+
+        assertNotNull(resource);
+
+        assertEquals(
+                "img1",
+                resource.getResourceId()
+        );
+
+        assertEquals(
+                "/img/bali.jpg",
+                resource.getResourcePath()
+        );
     }
 
+    @Test
+    void shouldReturnNullForUnknownResource() {
+        OriginServer originServer = new OriginServer();
+
+        Resource resource =
+                originServer.getResourceFromOriginServer("unknown");
+
+        assertNull(resource);
+    }
 }

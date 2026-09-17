@@ -1,6 +1,9 @@
 package mk.ukim.finki.cdn_simulatorproject.service.impl;
 
-import mk.ukim.finki.cdn_simulatorproject.model.*;
+import mk.ukim.finki.cdn_simulatorproject.model.EdgeServerManager;
+import mk.ukim.finki.cdn_simulatorproject.model.ReplicaServer;
+import mk.ukim.finki.cdn_simulatorproject.model.ReplicaServerManager;
+import mk.ukim.finki.cdn_simulatorproject.model.Resource;
 import mk.ukim.finki.cdn_simulatorproject.service.CacheService;
 import org.springframework.stereotype.Service;
 
@@ -9,60 +12,41 @@ public class CacheServiceImpl implements CacheService {
 
     private final EdgeServerManager edgeServerManager;
     private final ReplicaServerManager replicaServerManager;
-    private final OriginServer originServer;
 
-    public CacheServiceImpl(EdgeServerManager edgeServerManager, ReplicaServerManager replicaServerManager, OriginServer originServer) {
+    public CacheServiceImpl(
+            EdgeServerManager edgeServerManager,
+            ReplicaServerManager replicaServerManager
+    ) {
         this.edgeServerManager = edgeServerManager;
         this.replicaServerManager = replicaServerManager;
-        this.originServer = originServer;
     }
 
     @Override
     public Resource fetchResource(String resourceId) {
-        EdgeServer edgeServer = edgeServerManager.getTheLeastLoadedReplicaServer();
-        Resource resource = edgeServer.getCacheStrategy().getResource(resourceId);
-
-        if (resource != null) {
-            System.out.println("[EdgeServer " + edgeServer.getEdgeServerId() + "] Cache HIT for: " + resourceId);
-            edgeServer.setRequestCount(edgeServer.getRequestCount() + 1);
-            return resource;
+        if (resourceId == null || resourceId.isBlank()) {
+            throw new IllegalArgumentException("Resource ID is required.");
         }
 
-        ReplicaServer replicaServer = replicaServerManager.getTheLeastLoadedReplicaServer();
-        resource = replicaServer.getCacheStrategy().getResource(resourceId);
-
-        if (resource != null) {
-            System.out.println("[ReplicaServer " + replicaServer.getReplicaServerId() + "] Cache HIT for: " + resourceId);
-            replicaServer.
-                    setCountRequests(replicaServer.getCountRequests() + 1);
-
-            edgeServer.getCacheStrategy().putInCache(resource);
-
-            return resource;
-        }
-
-        System.out.println("Resource " + resourceId + " not found in cache. Fetching from Origin...");
-        resource = originServer.getResourceFromOriginServer(resourceId);
-        edgeServer.getCacheStrategy().putInCache(resource);
-        replicaServer.getCacheStrategy().putInCache(resource);
-
-        return resource;
+        return edgeServerManager.routeRequest(resourceId);
     }
 
     @Override
     public void clearCache() {
+        edgeServerManager.getEdgeServerList()
+                .forEach(edgeServer ->
+                        edgeServer.getCacheStrategy().clearCache());
 
-        edgeServerManager.getEdgeServerList().stream()
-                .forEach(edgeServer -> edgeServer.getCacheStrategy().clearCache());
-
-        replicaServerManager.getReplicaServerList().stream()
-                .forEach(replicaServer -> replicaServer.getCacheStrategy().clearCache());
+        replicaServerManager.getReplicaServerList()
+                .forEach(replicaServer ->
+                        replicaServer.getCacheStrategy().clearCache());
     }
 
+    @Override
     public void addReplicaServer(ReplicaServer replicaServer) {
         replicaServerManager.addReplicaServer(replicaServer);
     }
 
+    @Override
     public void removeReplicaServer(ReplicaServer replicaServer) {
         replicaServerManager.removeReplicaServer(replicaServer);
     }

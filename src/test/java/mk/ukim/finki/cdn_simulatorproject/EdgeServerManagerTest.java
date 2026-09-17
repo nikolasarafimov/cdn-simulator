@@ -9,28 +9,66 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class EdgeServerManagerTest {
+class EdgeServerManagerTest {
 
     @Test
-    void testGetTheLeastLoadedReplicaServer() {
+    void shouldReturnLeastLoadedEdgeServer() {
         EdgeServerManager manager = new EdgeServerManager();
+        OriginServer originServer = new OriginServer();
 
-        OriginServer origin = new OriginServer();
-        LRUAlgorithm lru = new LRUAlgorithm(2);
+        ReplicaServer replica1 = new ReplicaServer(
+                "Replica1",
+                new LRUAlgorithm(2),
+                originServer,
+                "us-east-1"
+        );
 
-        EdgeServer e1 = new EdgeServer("Edge1", lru, new ReplicaServer("Replica1", lru, origin,"us-east-1"));
-        EdgeServer e2 = new EdgeServer("Edge2", lru, new ReplicaServer("Replica2", lru, origin,"eu-west-1"));
-        EdgeServer e3 = new EdgeServer("Edge3", lru, new ReplicaServer("Replica3", lru, origin,"eu-east-1"));
+        ReplicaServer replica2 = new ReplicaServer(
+                "Replica2",
+                new LRUAlgorithm(2),
+                originServer,
+                "eu-west-1"
+        );
 
-        manager.addEdgeServer(e1);
-        manager.addEdgeServer(e2);
-        manager.addEdgeServer(e3);
+        ReplicaServer replica3 = new ReplicaServer(
+                "Replica3",
+                new LRUAlgorithm(2),
+                originServer,
+                "eu-east-1"
+        );
 
-        e1.setRequestCount(10);
-        e2.setRequestCount(2);
-        e3.setRequestCount(5);
+        EdgeServer edge1 = new EdgeServer(
+                "Edge1",
+                new LRUAlgorithm(2),
+                replica1
+        );
 
-        EdgeServer leastLoaded = manager.getTheLeastLoadedReplicaServer();
-        assertEquals("Edge2", leastLoaded.getEdgeServerId());
+        EdgeServer edge2 = new EdgeServer(
+                "Edge2",
+                new LRUAlgorithm(2),
+                replica2
+        );
+
+        EdgeServer edge3 = new EdgeServer(
+                "Edge3",
+                new LRUAlgorithm(2),
+                replica3
+        );
+
+        manager.addEdgeServer(edge1);
+        manager.addEdgeServer(edge2);
+        manager.addEdgeServer(edge3);
+
+        edge1.setRequestCount(10);
+        edge2.setRequestCount(2);
+        edge3.setRequestCount(5);
+
+        EdgeServer leastLoaded =
+                manager.getLeastLoadedEdgeServer();
+
+        assertEquals(
+                "Edge2",
+                leastLoaded.getEdgeServerId()
+        );
     }
 }
