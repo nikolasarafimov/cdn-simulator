@@ -1,4 +1,5 @@
 # CDN Simulator
+[![CI](https://github.com/nikolasarafimov/cdn-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/nikolasarafimov/cdn-simulator/actions/workflows/ci.yml)
 
 A Spring Boot application that simulates the core behavior of a **Content Delivery Network (CDN)**, including multi-layer caching, request routing, load balancing, cache eviction strategies, request tracing, and origin-server fallback.
 
