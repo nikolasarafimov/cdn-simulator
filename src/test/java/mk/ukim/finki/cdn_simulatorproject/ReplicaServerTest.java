@@ -1,10 +1,8 @@
 package mk.ukim.finki.cdn_simulatorproject;
 
-import mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms.FIFOAlgorithm;
 import mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms.LRUAlgorithm;
 import mk.ukim.finki.cdn_simulatorproject.dto.HopDTO;
 import mk.ukim.finki.cdn_simulatorproject.model.ClientRequest;
-import mk.ukim.finki.cdn_simulatorproject.model.EdgeServer;
 import mk.ukim.finki.cdn_simulatorproject.model.OriginServer;
 import mk.ukim.finki.cdn_simulatorproject.model.ReplicaServer;
 import mk.ukim.finki.cdn_simulatorproject.model.Resource;
@@ -16,10 +14,11 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class EdgeServerTest {
+class ReplicaServerTest {
 
     @Test
     void shouldFetchFromOriginAndCacheResourceOnFirstRequest() {
@@ -32,18 +31,12 @@ class EdgeServerTest {
                 "eu-west-1"
         );
 
-        EdgeServer edgeServer = new EdgeServer(
-                "Edge1",
-                new FIFOAlgorithm(2),
-                replicaServer
-        );
-
         ClientRequest request = new ClientRequest();
         request.setResourceId("img1");
 
         List<HopDTO> trace = new ArrayList<>();
 
-        Resource response = edgeServer.handleRequest(
+        Resource response = replicaServer.handleRequest(
                 request,
                 trace
         );
@@ -51,32 +44,26 @@ class EdgeServerTest {
         assertNotNull(response);
         assertEquals("img1", response.getResourceId());
 
-        assertNotNull(
-                edgeServer.getCacheStrategy()
-                        .getResource("img1")
-        );
-
-        assertNotNull(
+        Resource cachedResource =
                 replicaServer.getCacheStrategy()
-                        .getResource("img1")
-        );
+                        .getResource("img1");
 
-        assertEquals(1, edgeServer.getRequestCount());
+        assertNotNull(cachedResource);
+        assertSame(response, cachedResource);
+
         assertEquals(1, replicaServer.getCountRequests());
 
-        assertEquals(2, trace.size());
+        assertEquals(1, trace.size());
 
-        assertEquals("Edge1", trace.get(0).serverId());
-        assertEquals("EDGE", trace.get(0).level());
-        assertFalse(trace.get(0).hit());
+        HopDTO hop = trace.getFirst();
 
-        assertEquals("Replica1", trace.get(1).serverId());
-        assertEquals("REPLICA", trace.get(1).level());
-        assertFalse(trace.get(1).hit());
+        assertEquals("Replica1", hop.serverId());
+        assertEquals("REPLICA", hop.level());
+        assertFalse(hop.hit());
     }
 
     @Test
-    void shouldServeSecondRequestDirectlyFromEdgeCache() {
+    void shouldServeSecondRequestFromReplicaCache() {
         OriginServer originServer = new OriginServer();
 
         ReplicaServer replicaServer = new ReplicaServer(
@@ -86,45 +73,63 @@ class EdgeServerTest {
                 "eu-west-1"
         );
 
-        EdgeServer edgeServer = new EdgeServer(
-                "Edge1",
-                new FIFOAlgorithm(2),
-                replicaServer
-        );
-
         ClientRequest request = new ClientRequest();
         request.setResourceId("img1");
 
         Resource firstResponse =
-                edgeServer.handleRequests(request);
+                replicaServer.handleRequest(request);
 
-        List<HopDTO> secondTrace =
-                new ArrayList<>();
+        List<HopDTO> secondTrace = new ArrayList<>();
 
         Resource secondResponse =
-                edgeServer.handleRequest(
+                replicaServer.handleRequest(
                         request,
                         secondTrace
                 );
 
-        assertSame(
-                firstResponse,
-                secondResponse
-        );
+        assertSame(firstResponse, secondResponse);
 
-        assertEquals(2, edgeServer.getRequestCount());
-
-        assertEquals(
-                1,
-                replicaServer.getCountRequests()
-        );
+        assertEquals(2, replicaServer.getCountRequests());
 
         assertEquals(1, secondTrace.size());
 
-        HopDTO edgeHop = secondTrace.getFirst();
+        HopDTO hop = secondTrace.getFirst();
 
-        assertEquals("Edge1", edgeHop.serverId());
-        assertEquals("EDGE", edgeHop.level());
-        assertTrue(edgeHop.hit());
+        assertEquals("Replica1", hop.serverId());
+        assertEquals("REPLICA", hop.level());
+        assertTrue(hop.hit());
+    }
+
+    @Test
+    void shouldReturnNullForUnknownResource() {
+        OriginServer originServer = new OriginServer();
+
+        ReplicaServer replicaServer = new ReplicaServer(
+                "Replica1",
+                new LRUAlgorithm(2),
+                originServer,
+                "eu-west-1"
+        );
+
+        ClientRequest request = new ClientRequest();
+        request.setResourceId("unknown");
+
+        List<HopDTO> trace = new ArrayList<>();
+
+        Resource response = replicaServer.handleRequest(
+                request,
+                trace
+        );
+
+        assertNull(response);
+
+        assertNull(
+                replicaServer.getCacheStrategy()
+                        .getResource("unknown")
+        );
+
+        assertEquals(1, replicaServer.getCountRequests());
+        assertEquals(1, trace.size());
+        assertFalse(trace.getFirst().hit());
     }
 }

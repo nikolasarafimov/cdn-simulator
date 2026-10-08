@@ -19,7 +19,9 @@ public class FIFOAlgorithm implements CacheStrategy {
 
     public FIFOAlgorithm(int capacity) {
         if (capacity <= 0) {
-            throw new IllegalArgumentException("Cache capacity must be greater than zero.");
+            throw new IllegalArgumentException(
+                    "Cache capacity must be greater than zero."
+            );
         }
 
         this.capacity = capacity;
@@ -28,13 +30,22 @@ public class FIFOAlgorithm implements CacheStrategy {
     }
 
     @Override
-    public void removeFromCache(ClientRequest clientRequest) {
+    public synchronized void removeFromCache(
+            ClientRequest clientRequest
+    ) {
         if (clientRequest == null) {
             return;
         }
 
-        String resourceId = clientRequest.getResourceId();
-        Resource resource = resourceMap.remove(resourceId);
+        String resourceId =
+                clientRequest.getResourceId();
+
+        if (resourceId == null) {
+            return;
+        }
+
+        Resource resource =
+                resourceMap.remove(resourceId);
 
         if (resource != null) {
             resourceQueue.remove(resource);
@@ -42,33 +53,40 @@ public class FIFOAlgorithm implements CacheStrategy {
     }
 
     @Override
-    public void clearCache() {
+    public synchronized void clearCache() {
         resourceQueue.clear();
         resourceMap.clear();
     }
 
     @Override
-    public boolean isCacheFull() {
+    public synchronized boolean isCacheFull() {
         return resourceQueue.size() >= capacity;
     }
 
     @Override
-    public void putInCache(Resource resource) {
-        if (resource == null || resource.getResourceId() == null) {
+    public synchronized void putInCache(
+            Resource resource
+    ) {
+        if (resource == null
+                || resource.getResourceId() == null) {
             return;
         }
 
-        String resourceId = resource.getResourceId();
+        String resourceId =
+                resource.getResourceId();
 
         if (resourceMap.containsKey(resourceId)) {
             return;
         }
 
-        if (isCacheFull()) {
-            Resource oldestResource = resourceQueue.poll();
+        if (resourceQueue.size() >= capacity) {
+            Resource oldestResource =
+                    resourceQueue.poll();
 
             if (oldestResource != null) {
-                resourceMap.remove(oldestResource.getResourceId());
+                resourceMap.remove(
+                        oldestResource.getResourceId()
+                );
             }
         }
 
@@ -77,12 +95,18 @@ public class FIFOAlgorithm implements CacheStrategy {
     }
 
     @Override
-    public Collection<Resource> snapshot() {
+    public synchronized Collection<Resource> snapshot() {
         return List.copyOf(resourceQueue);
     }
 
     @Override
-    public Resource getResource(String resourceId) {
+    public synchronized Resource getResource(
+            String resourceId
+    ) {
+        if (resourceId == null) {
+            return null;
+        }
+
         return resourceMap.get(resourceId);
     }
 }

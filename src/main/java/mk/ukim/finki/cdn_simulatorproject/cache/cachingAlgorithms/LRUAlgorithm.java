@@ -16,53 +16,84 @@ public class LRUAlgorithm implements CacheStrategy {
 
     public LRUAlgorithm(int capacity) {
         if (capacity <= 0) {
-            throw new IllegalArgumentException("Cache capacity must be greater than zero.");
+            throw new IllegalArgumentException(
+                    "Cache capacity must be greater than zero."
+            );
         }
 
         this.capacity = capacity;
-        this.lruMap = new LinkedHashMap<String, Resource>(16, 0.75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, Resource> eldest) {
-                return size() > LRUAlgorithm.this.capacity;
-            }
-        };
+
+        this.lruMap =
+                new LinkedHashMap<String, Resource>(
+                        16,
+                        0.75f,
+                        true
+                ) {
+                    @Override
+                    protected boolean removeEldestEntry(
+                            Map.Entry<String, Resource> eldest
+                    ) {
+                        return size() > LRUAlgorithm.this.capacity;
+                    }
+                };
     }
 
     @Override
-    public void removeFromCache(ClientRequest clientRequest) {
+    public synchronized void removeFromCache(
+            ClientRequest clientRequest
+    ) {
         if (clientRequest == null) {
             return;
         }
 
-        lruMap.remove(clientRequest.getResourceId());
+        String resourceId =
+                clientRequest.getResourceId();
+
+        if (resourceId == null) {
+            return;
+        }
+
+        lruMap.remove(resourceId);
     }
 
     @Override
-    public void clearCache() {
+    public synchronized void clearCache() {
         lruMap.clear();
     }
 
     @Override
-    public void putInCache(Resource resource) {
-        if (resource == null || resource.getResourceId() == null) {
+    public synchronized void putInCache(
+            Resource resource
+    ) {
+        if (resource == null
+                || resource.getResourceId() == null) {
             return;
         }
 
-        lruMap.put(resource.getResourceId(), resource);
+        String resourceId =
+                resource.getResourceId();
+
+        if (lruMap.containsKey(resourceId)) {
+            return;
+        }
+
+        lruMap.put(resourceId, resource);
     }
 
     @Override
-    public Collection<Resource> snapshot() {
+    public synchronized Collection<Resource> snapshot() {
         return List.copyOf(lruMap.values());
     }
 
     @Override
-    public boolean isCacheFull() {
+    public synchronized boolean isCacheFull() {
         return lruMap.size() >= capacity;
     }
 
     @Override
-    public Resource getResource(String resourceId) {
+    public synchronized Resource getResource(
+            String resourceId
+    ) {
         if (resourceId == null) {
             return null;
         }

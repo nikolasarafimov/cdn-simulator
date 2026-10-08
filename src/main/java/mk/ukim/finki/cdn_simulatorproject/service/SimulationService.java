@@ -5,6 +5,7 @@ import mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms.FIFOAlgorithm;
 import mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms.LFUAlgorithm;
 import mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms.LRUAlgorithm;
 import mk.ukim.finki.cdn_simulatorproject.dto.HopDTO;
+import mk.ukim.finki.cdn_simulatorproject.dto.RequestTraceDTO;
 import mk.ukim.finki.cdn_simulatorproject.model.ClientRequest;
 import mk.ukim.finki.cdn_simulatorproject.model.EdgeServer;
 import mk.ukim.finki.cdn_simulatorproject.model.EdgeServerManager;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Service
 public class SimulationService {
@@ -26,9 +29,7 @@ public class SimulationService {
     private final EdgeServerManager edgeServerManager;
     private final OriginServer originServer;
 
-    private final List<ClientRequest> requestLog;
-
-    private List<HopDTO> lastTrace;
+    private final Queue<ClientRequest> requestLog;
 
     public SimulationService(
             CDNService cdnService,
@@ -38,8 +39,7 @@ public class SimulationService {
         this.cdnService = cdnService;
         this.edgeServerManager = edgeServerManager;
         this.originServer = originServer;
-        this.requestLog = new ArrayList<>();
-        this.lastTrace = List.of();
+        this.requestLog = new ConcurrentLinkedQueue<>();
     }
 
     @PostConstruct
@@ -81,26 +81,36 @@ public class SimulationService {
         edgeServerManager.addEdgeServer(edgeB);
     }
 
-    public ClientRequest handleClientRequest(
+    public RequestTraceDTO handleClientRequest(
             String clientId,
             String resourceId,
             String url
     ) {
         if (clientId == null || clientId.isBlank()) {
-            throw new IllegalArgumentException("Client ID is required.");
+            throw new IllegalArgumentException(
+                    "Client ID is required."
+            );
         }
 
         if (resourceId == null || resourceId.isBlank()) {
-            throw new IllegalArgumentException("Resource ID is required.");
+            throw new IllegalArgumentException(
+                    "Resource ID is required."
+            );
         }
 
         if (url == null || url.isBlank()) {
-            throw new IllegalArgumentException("URL is required.");
+            throw new IllegalArgumentException(
+                    "URL is required."
+            );
         }
 
         List<HopDTO> trace = new ArrayList<>();
 
-        Resource resource = cdnService.fetchResource(resourceId, trace);
+        Resource resource =
+                cdnService.fetchResource(
+                        resourceId,
+                        trace
+                );
 
         if (resource == null) {
             throw new IllegalArgumentException(
@@ -108,25 +118,47 @@ public class SimulationService {
             );
         }
 
-        boolean servedFromCache = trace.stream()
-                .anyMatch(HopDTO::hit);
+        List<HopDTO> immutableTrace =
+                List.copyOf(trace);
 
-        ClientRequest request = new ClientRequest();
-        request.setClientID(clientId);
+        boolean servedFromCache =
+                immutableTrace.stream()
+                        .anyMatch(HopDTO::hit);
+
+        boolean hitOnEdge =
+                !immutableTrace.isEmpty()
+                        && "EDGE".equals(
+                        immutableTrace
+                                .getFirst()
+                                .level()
+                )
+                        && immutableTrace
+                        .getFirst()
+                        .hit();
+
+        ClientRequest request =
+                new ClientRequest();
+
+        request.setClientId(clientId);
         request.setResourceId(resourceId);
         request.setUrl(url);
-        request.setTimestamp(Instant.now().toEpochMilli());
+        request.setTimestamp(
+                Instant.now().toEpochMilli()
+        );
         request.setCached(servedFromCache);
-        request.setResourcePath(resource.getResourcePath());
+        request.setResourcePath(
+                resource.getResourcePath()
+        );
 
         requestLog.add(request);
-        lastTrace = List.copyOf(trace);
 
-        return request;
-    }
-
-    public List<HopDTO> getLastTrace() {
-        return List.copyOf(lastTrace);
+        return new RequestTraceDTO(
+                resourceId,
+                url,
+                hitOnEdge,
+                immutableTrace,
+                resource.getResourcePath()
+        );
     }
 
     public List<ClientRequest> getRequestLog() {

@@ -3,7 +3,7 @@
 
 A Spring Boot application that simulates the core behavior of a **Content Delivery Network (CDN)**, including multi-layer caching, request routing, load balancing, cache eviction strategies, request tracing, and origin-server fallback.
 
-The simulator provides an interactive interface that visualizes how resource requests travel through edge servers, replica servers, and the origin server while tracking cache hits, cache misses, request counts, and overall cache performance.
+The simulator provides an interactive interface that visualizes how resource requests travel through edge servers, replica servers, and the origin server while tracking cache hits, cache misses, per-server request counts, and overall cache performance.
 
 ---
 
@@ -30,7 +30,7 @@ The default topology contains:
 - 1 origin server
 - Cache capacity of 2 resources per caching server
 
-The configured servers use different caching strategies:
+The configured servers use different cache replacement strategies:
 
 | Server | Layer | Cache Strategy |
 |---|---|---|
@@ -39,7 +39,7 @@ The configured servers use different caching strategies:
 | `replica-us-east` | Replica | LRU |
 | `replica-eu-west` | Replica | LFU |
 
-This allows different cache eviction strategies to operate within the same simulated CDN topology.
+This allows multiple cache eviction strategies to operate within the same simulated CDN topology.
 
 ---
 
@@ -49,13 +49,13 @@ The project implements three cache replacement strategies.
 
 ### FIFO
 
-**First In, First Out** removes the resource that entered the cache first when the cache reaches its configured capacity.
+**First In, First Out** removes the resource that entered the cache first when the configured cache capacity is reached.
 
 ### LRU
 
 **Least Recently Used** removes the resource that has not been accessed for the longest period of time.
 
-Accessing a cached resource refreshes its position in the access order.
+Accessing a cached resource updates its recency.
 
 ### LFU
 
@@ -69,23 +69,24 @@ Each successful cache access increases the resource's frequency counter.
 
 Requests are routed to the **least-loaded edge server** based on the number of requests handled by each edge server.
 
-When a resource is requested:
+For each client request:
 
-1. The selected edge server checks its local cache.
-2. If the resource is found, it is returned immediately.
-3. If the edge cache misses, the request is forwarded to the replica server assigned to that edge.
-4. The replica server checks its own cache.
-5. If the replica cache also misses, the resource is retrieved from the origin server.
-6. The retrieved resource is cached on the request path.
-7. The resource is returned to the client.
+1. The least-loaded edge server is selected.
+2. The edge server checks its local cache.
+3. If the resource is found, it is returned immediately.
+4. If the edge cache misses, the request is forwarded to the replica server assigned to that edge.
+5. The replica server checks its own cache.
+6. If the replica cache also misses, the resource is retrieved from the origin server.
+7. The retrieved resource is cached along the return path.
+8. The resource is delivered to the client.
 
-Edge request counters are used to distribute requests between available edge servers.
+Edge request counters are used to distribute requests across the available edge servers.
 
 ---
 
 ## Request Tracing
 
-Each simulated client request generates a trace describing the path taken through the CDN.
+Each simulated client request generates a backend trace describing the route taken through the CDN.
 
 Every trace hop contains:
 
@@ -106,7 +107,7 @@ replica-us-east     CACHE MISS
 Origin Server
 ```
 
-A later request may be served directly from an edge cache:
+A later request may be served directly from a cache:
 
 ```text
 Client
@@ -114,7 +115,7 @@ Client
 edge-a              CACHE HIT
 ```
 
-The frontend uses the backend-generated trace to visualize the request and update the request log.
+The frontend uses the backend-generated trace to animate request routing and update the trace log.
 
 ---
 
@@ -123,13 +124,13 @@ The frontend uses the backend-generated trace to visualize the request and updat
 The interface tracks:
 
 - Total client requests
-- Requests served from cache
-- Requests requiring origin retrieval
+- Cache hits
+- Cache misses requiring origin retrieval
 - Cache hit ratio
 - Requests handled by each edge server
 - Requests handled by each replica server
 
-These statistics make it possible to observe how repeated requests affect CDN cache efficiency.
+These metrics make it possible to observe how repeated requests affect CDN cache efficiency.
 
 ---
 
@@ -152,7 +153,7 @@ The corresponding image files are served as static application resources.
 
 ## Cache Management
 
-All edge and replica caches can be cleared from the simulator interface.
+All edge and replica caches can be cleared directly from the simulator interface.
 
 The backend endpoint is:
 
@@ -160,7 +161,7 @@ The backend endpoint is:
 DELETE /cache/clear
 ```
 
-Clearing the caches removes currently cached resources while leaving the CDN topology and server configuration intact.
+Clearing the caches removes currently cached resources while preserving the CDN topology and server configuration.
 
 ---
 
@@ -227,20 +228,27 @@ Example response:
 
 ---
 
-## Authentication
+## Authentication and Security
 
 The application uses **Spring Security** with form-based authentication.
 
-The current demonstration account is:
+For local development, the default credentials are:
 
 ```text
 Username: user
 Password: user
 ```
 
-The credentials are intended only for local demonstration and educational use.
+The credentials can be overridden using environment variables:
 
-The simulator interface can be loaded directly, while protected backend functionality requires authentication.
+```text
+APP_USERNAME
+APP_PASSWORD
+```
+
+The main simulator page and static assets are publicly accessible, while CDN API and cache-management endpoints require authentication.
+
+State-changing requests are protected by Spring Security CSRF protection. The Thymeleaf-rendered page exposes the CSRF token to the frontend, and JavaScript includes the token when sending `POST` and `DELETE` requests.
 
 ---
 
@@ -261,15 +269,15 @@ The interface provides:
 - Per-server request counters
 - Cache clearing controls
 - Simulation statistics
-- Responsive layouts
+- Responsive layout
 
-The frontend uses the Spring Boot REST API as the source of truth for request routing and caching behavior instead of maintaining an independent CDN simulation.
+The frontend uses the backend-generated trace as the source of truth for CDN routing and caching behavior.
 
 ---
 
 ## Architecture
 
-The project separates CDN behavior into caching, model, service, API, and presentation layers.
+The project separates CDN behavior into caching, model, service, API, configuration, and presentation layers.
 
 ```text
 src/
@@ -325,8 +333,10 @@ src/
 │       │   ├── images/
 │       │   ├── img/
 │       │   ├── app.js
-│       │   ├── index.html
 │       │   └── style.css
+│       │
+│       ├── templates/
+│       │   └── index.html
 │       │
 │       └── application.properties
 │
@@ -349,17 +359,18 @@ src/
 | Technology | Purpose |
 |---|---|
 | **Java 21** | Application language and runtime |
-| **Spring Boot 3** | Application framework |
+| **Spring Boot 3.4.3** | Application framework |
 | **Spring Web** | REST API |
-| **Spring Security** | Authentication and authorization |
+| **Spring Security** | Authentication, authorization, and CSRF protection |
 | **Spring Data JPA** | Entity and persistence infrastructure |
-| **H2 Database** | In-memory development database |
+| **H2 Database** | In-memory database |
+| **Thymeleaf** | Server-side page rendering and CSRF token integration |
 | **HTML5** | Frontend structure |
-| **CSS3** | Responsive interface |
+| **CSS3** | Responsive interface and animations |
 | **JavaScript** | API communication and request visualization |
 | **JUnit 5** | Automated testing |
 | **Maven** | Dependency management and build automation |
-| **Docker** | Containerized application builds |
+| **Docker** | Multi-stage containerized builds |
 
 ---
 
@@ -445,13 +456,7 @@ The application starts at:
 http://localhost:8080
 ```
 
-Spring Security login is available at:
-
-```text
-http://localhost:8080/login
-```
-
-Demo credentials:
+Default local credentials:
 
 ```text
 Username: user
@@ -474,7 +479,7 @@ The generated artifact is placed inside:
 target/
 ```
 
-Run the application with:
+Run it with:
 
 ```bash
 java -jar target/*.jar
@@ -484,7 +489,7 @@ java -jar target/*.jar
 
 ## Docker
 
-The repository contains a multi-stage Docker build.
+The repository contains a multi-stage Docker build using Java 21.
 
 ### Build the Image
 
@@ -506,11 +511,25 @@ http://localhost:8080
 
 The Docker build runs the Maven build and automated tests before producing the runtime image.
 
+The final application process runs as a non-root user inside the container.
+
+### Custom Authentication
+
+Credentials can be supplied to the container through environment variables:
+
+```bash
+docker run --rm \
+  -p 8080:8080 \
+  -e APP_USERNAME=demo \
+  -e APP_PASSWORD=change-me \
+  cdn-simulator
+```
+
 ---
 
 ## Configuration
 
-The application uses an in-memory H2 database during development.
+The default configuration uses an in-memory H2 database:
 
 ```properties
 spring.application.name=cdn-simulator
@@ -521,6 +540,9 @@ spring.datasource.password=
 
 spring.jpa.hibernate.ddl-auto=create-drop
 spring.jpa.open-in-view=false
+
+app.security.username=${APP_USERNAME:user}
+app.security.password=${APP_PASSWORD:user}
 ```
 
 Because the database is stored in memory, its contents are recreated whenever the application restarts.
@@ -531,7 +553,7 @@ The CDN topology and cache contents are also initialized in memory when the appl
 
 ## Repository Notes
 
-Generated and IDE-specific files are excluded from source control, including:
+Generated, operating-system-specific, and IDE-specific files are excluded from source control, including:
 
 ```text
 target/
@@ -539,6 +561,8 @@ target/
 .vscode/
 *.iml
 *.log
+.DS_Store
+Thumbs.db
 ```
 
 The Maven Wrapper remains tracked so the project can be built without requiring Maven to be installed globally.
@@ -553,14 +577,14 @@ Potential future extensions include:
 - Latency simulation
 - Configurable server topology
 - Runtime cache algorithm selection
-- Persistent request metrics
 - Cache TTL and expiration
-- Distributed cache simulation
+- Persistent request metrics
 - Additional load-balancing strategies
 - Server failure simulation
 - Rate limiting
-- Configurable authentication
-- Additional integration tests
+- Integration and controller tests
+- Concurrency-focused tests
+- End-to-end browser testing
 - Performance benchmarking
 
 ---
@@ -574,4 +598,4 @@ Potential future extensions include:
 
 ## License
 
-This project was developed for educational and portfolio purposes.
+No open-source license is currently specified for this repository.

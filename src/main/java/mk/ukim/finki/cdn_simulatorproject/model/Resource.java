@@ -2,10 +2,12 @@ package mk.ukim.finki.cdn_simulatorproject.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @Entity
 public class Resource {
@@ -16,7 +18,6 @@ public class Resource {
     private String resourceType;
     private long resourceSize;
     private String resourcePath;
-    private boolean resourceIsCached;
 
     public Resource(
             String resourceId,
@@ -25,19 +26,27 @@ public class Resource {
             String resourcePath
     ) {
         if (resourceId == null || resourceId.isBlank()) {
-            throw new IllegalArgumentException("Resource ID is required.");
+            throw new IllegalArgumentException(
+                    "Resource ID is required."
+            );
         }
 
         if (resourceType == null || resourceType.isBlank()) {
-            throw new IllegalArgumentException("Resource type is required.");
+            throw new IllegalArgumentException(
+                    "Resource type is required."
+            );
         }
 
         if (resourceSize < 0) {
-            throw new IllegalArgumentException("Resource size cannot be negative.");
+            throw new IllegalArgumentException(
+                    "Resource size cannot be negative."
+            );
         }
 
         if (resourcePath == null || resourcePath.isBlank()) {
-            throw new IllegalArgumentException("Resource path is required.");
+            throw new IllegalArgumentException(
+                    "Resource path is required."
+            );
         }
 
         this.resourceId = resourceId;

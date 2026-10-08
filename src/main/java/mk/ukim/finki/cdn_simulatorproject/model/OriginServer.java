@@ -15,15 +15,52 @@ public class OriginServer {
     public OriginServer() {
         this.resourceMap = new LinkedHashMap<>();
 
-        addResource("img1", "image", 1024, "/img/bali.jpg");
-        addResource("img2", "image", 1024, "/img/bike.jpg");
-        addResource("img3", "image", 1024, "/img/dolphins.jpg");
-        addResource("img4", "image", 1024, "/img/bird.jpg");
-        addResource("img5", "image", 1024, "/img/tigers.jpg");
-        addResource("img6", "image", 1024, "/img/city.jpeg");
+        addResource(
+                "img1",
+                "image",
+                1024,
+                "/img/bali.jpg"
+        );
+
+        addResource(
+                "img2",
+                "image",
+                1024,
+                "/img/bike.jpg"
+        );
+
+        addResource(
+                "img3",
+                "image",
+                1024,
+                "/img/dolphins.jpg"
+        );
+
+        addResource(
+                "img4",
+                "image",
+                1024,
+                "/img/bird.jpg"
+        );
+
+        addResource(
+                "img5",
+                "image",
+                1024,
+                "/img/tigers.jpg"
+        );
+
+        addResource(
+                "img6",
+                "image",
+                1024,
+                "/img/city.jpeg"
+        );
     }
 
-    public Resource getResourceFromOriginServer(String resourceId) {
+    public Resource getResourceFromOriginServer(
+            String resourceId
+    ) {
         if (resourceId == null || resourceId.isBlank()) {
             return null;
         }
@@ -38,19 +75,27 @@ public class OriginServer {
             String resourcePath
     ) {
         if (resourceId == null || resourceId.isBlank()) {
-            throw new IllegalArgumentException("Resource ID is required.");
+            throw new IllegalArgumentException(
+                    "Resource ID is required."
+            );
         }
 
         if (resourceType == null || resourceType.isBlank()) {
-            throw new IllegalArgumentException("Resource type is required.");
+            throw new IllegalArgumentException(
+                    "Resource type is required."
+            );
         }
 
         if (resourceSize < 0) {
-            throw new IllegalArgumentException("Resource size cannot be negative.");
+            throw new IllegalArgumentException(
+                    "Resource size cannot be negative."
+            );
         }
 
         if (resourcePath == null || resourcePath.isBlank()) {
-            throw new IllegalArgumentException("Resource path is required.");
+            throw new IllegalArgumentException(
+                    "Resource path is required."
+            );
         }
 
         resourceMap.put(
@@ -65,10 +110,14 @@ public class OriginServer {
     }
 
     public Map<String, Resource> getResourceMap() {
-        return Collections.unmodifiableMap(resourceMap);
+        return Collections.unmodifiableMap(
+                resourceMap
+        );
     }
 
     public List<Resource> listAll() {
-        return List.copyOf(resourceMap.values());
+        return List.copyOf(
+                resourceMap.values()
+        );
     }
 }

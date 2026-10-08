@@ -31,29 +31,47 @@ public class CDNServiceImpl implements CDNService {
             List<HopDTO> trace
     ) {
         if (resourceId == null || resourceId.isBlank()) {
-            throw new IllegalArgumentException("Resource ID is required.");
+            throw new IllegalArgumentException(
+                    "Resource ID is required."
+            );
         }
 
         if (trace == null) {
-            throw new IllegalArgumentException("Request trace is required.");
+            throw new IllegalArgumentException(
+                    "Request trace is required."
+            );
         }
 
-        return edgeServerManager.routeRequest(resourceId, trace);
+        return edgeServerManager.routeRequest(
+                resourceId,
+                trace
+        );
     }
 
     @Override
     public Resource fetchResource(String resourceId) {
-        return fetchResource(resourceId, new ArrayList<>());
+        return fetchResource(
+                resourceId,
+                new ArrayList<>()
+        );
     }
 
     @Override
-    public void addReplicaServer(ReplicaServer replicaServer) {
-        cacheService.addReplicaServer(replicaServer);
+    public void addReplicaServer(
+            ReplicaServer replicaServer
+    ) {
+        cacheService.addReplicaServer(
+                replicaServer
+        );
     }
 
     @Override
-    public void removeReplicaServer(ReplicaServer replicaServer) {
-        cacheService.removeReplicaServer(replicaServer);
+    public void removeReplicaServer(
+            ReplicaServer replicaServer
+    ) {
+        cacheService.removeReplicaServer(
+                replicaServer
+        );
     }
 
     @Override

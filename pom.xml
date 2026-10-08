@@ -14,12 +14,12 @@
 
     <groupId>mk.ukim.finki</groupId>
     <artifactId>cdn-simulator</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
 
     <name>CDN Simulator</name>
     <description>
-        A Spring Boot application that simulates core Content Delivery Network
-        concepts including caching, routing, load balancing and request handling.
+        Interactive Spring Boot CDN simulator with multi-layer caching,
+        load balancing, FIFO/LRU/LFU strategies and request tracing.
     </description>
 
     <properties>
@@ -27,7 +27,6 @@
     </properties>
 
     <dependencies>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -66,11 +65,15 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -99,4 +102,5 @@
             </plugin>
         </plugins>
     </build>
+
 </project>

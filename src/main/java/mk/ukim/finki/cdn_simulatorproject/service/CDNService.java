@@ -8,7 +8,10 @@ import java.util.List;
 
 public interface CDNService {
 
-    Resource fetchResource(String resourceId,List<HopDTO> trace);
+    Resource fetchResource(
+            String resourceId,
+            List<HopDTO> trace
+    );
 
     Resource fetchResource(String resourceId);
 

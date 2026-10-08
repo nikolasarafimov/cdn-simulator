@@ -8,4 +8,9 @@ public record RequestTraceDTO(
         boolean hitOnEdge,
         List<HopDTO> trace,
         String resourcePath
-) {}
+) {
+
+    public RequestTraceDTO {
+        trace = List.copyOf(trace);
+    }
+}

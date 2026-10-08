@@ -7,4 +7,9 @@ public record HopDTO(
         String level,
         boolean hit,
         List<String> cache
-) {}
+) {
+
+    public HopDTO {
+        cache = List.copyOf(cache);
+    }
+}

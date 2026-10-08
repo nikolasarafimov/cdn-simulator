@@ -4,10 +4,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @Entity
 public class ClientRequest {
@@ -16,10 +18,10 @@ public class ClientRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String clientID;
+    private String clientId;
     private String resourceId;
     private String url;
-    private boolean isCached;
+    private boolean cached;
     private long timestamp;
     private String resourcePath;
 }

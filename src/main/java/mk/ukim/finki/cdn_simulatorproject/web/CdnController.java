@@ -3,7 +3,6 @@ package mk.ukim.finki.cdn_simulatorproject.web;
 import mk.ukim.finki.cdn_simulatorproject.dto.ClientRequestDTO;
 import mk.ukim.finki.cdn_simulatorproject.dto.RequestTraceDTO;
 import mk.ukim.finki.cdn_simulatorproject.dto.ResourceDTO;
-import mk.ukim.finki.cdn_simulatorproject.model.ClientRequest;
 import mk.ukim.finki.cdn_simulatorproject.model.OriginServer;
 import mk.ukim.finki.cdn_simulatorproject.model.Resource;
 import mk.ukim.finki.cdn_simulatorproject.service.CDNService;
@@ -40,39 +39,26 @@ public class CdnController {
     public ResponseEntity<Resource> fetchResource(
             @PathVariable String resourceId
     ) {
-        Resource resource = cdnService.fetchResource(resourceId);
+        Resource resource =
+                cdnService.fetchResource(resourceId);
 
         if (resource == null) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity
+                    .notFound()
+                    .build();
         }
 
         return ResponseEntity.ok(resource);
     }
 
     @PostMapping("/clientRequest")
-    public RequestTraceDTO handle(
+    public RequestTraceDTO handleClientRequest(
             @RequestBody ClientRequestDTO dto
     ) {
-        ClientRequest request =
-                simulationService.handleClientRequest(
-                        dto.clientId(),
-                        dto.resourceId(),
-                        dto.url()
-                );
-
-        var trace = simulationService.getLastTrace();
-
-        boolean hitOnEdge =
-                !trace.isEmpty()
-                        && "EDGE".equals(trace.getFirst().level())
-                        && trace.getFirst().hit();
-
-        return new RequestTraceDTO(
-                request.getResourceId(),
-                request.getUrl(),
-                hitOnEdge,
-                trace,
-                request.getResourcePath()
+        return simulationService.handleClientRequest(
+                dto.clientId(),
+                dto.resourceId(),
+                dto.url()
         );
     }
 

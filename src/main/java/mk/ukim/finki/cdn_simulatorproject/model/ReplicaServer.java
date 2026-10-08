@@ -8,8 +8,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.Transient;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import mk.ukim.finki.cdn_simulatorproject.cache.CacheStrategy;
 import mk.ukim.finki.cdn_simulatorproject.cache.CachingAlgorithmType;
 import mk.ukim.finki.cdn_simulatorproject.cache.cachingAlgorithms.FIFOAlgorithm;
@@ -20,7 +21,8 @@ import mk.ukim.finki.cdn_simulatorproject.dto.HopDTO;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @Entity
 public class ReplicaServer {
@@ -43,7 +45,7 @@ public class ReplicaServer {
     private OriginServer originServer;
 
     private String location;
-    private int countRequests;
+    private volatile int countRequests;
 
     public ReplicaServer(
             String replicaServerId,
@@ -52,24 +54,33 @@ public class ReplicaServer {
             String location
     ) {
         if (replicaServerId == null || replicaServerId.isBlank()) {
-            throw new IllegalArgumentException("Replica server ID is required.");
+            throw new IllegalArgumentException(
+                    "Replica server ID is required."
+            );
         }
 
         if (cacheStrategy == null) {
-            throw new IllegalArgumentException("Cache strategy is required.");
+            throw new IllegalArgumentException(
+                    "Cache strategy is required."
+            );
         }
 
         if (originServer == null) {
-            throw new IllegalArgumentException("Origin server is required.");
+            throw new IllegalArgumentException(
+                    "Origin server is required."
+            );
         }
 
         if (location == null || location.isBlank()) {
-            throw new IllegalArgumentException("Replica server location is required.");
+            throw new IllegalArgumentException(
+                    "Replica server location is required."
+            );
         }
 
         this.replicaServerId = replicaServerId;
         this.cacheStrategy = cacheStrategy;
-        this.cachingAlgorithmType = resolveAlgorithmType(cacheStrategy);
+        this.cachingAlgorithmType =
+                resolveAlgorithmType(cacheStrategy);
         this.originServer = originServer;
         this.location = location;
         this.countRequests = 0;
@@ -80,11 +91,15 @@ public class ReplicaServer {
             List<HopDTO> trace
     ) {
         if (clientRequest == null) {
-            throw new IllegalArgumentException("Client request is required.");
+            throw new IllegalArgumentException(
+                    "Client request is required."
+            );
         }
 
         if (trace == null) {
-            throw new IllegalArgumentException("Request trace is required.");
+            throw new IllegalArgumentException(
+                    "Request trace is required."
+            );
         }
 
         ensureCacheStrategyInitialized();
@@ -95,10 +110,12 @@ public class ReplicaServer {
             );
         }
 
-        countRequests++;
+        incrementRequestCount();
 
         Resource resource =
-                cacheStrategy.getResource(clientRequest.getResourceId());
+                cacheStrategy.getResource(
+                        clientRequest.getResourceId()
+                );
 
         boolean hit = resource != null;
 
@@ -128,8 +145,13 @@ public class ReplicaServer {
         return resource;
     }
 
-    public Resource handleRequest(ClientRequest clientRequest) {
-        return handleRequest(clientRequest, new ArrayList<>());
+    public Resource handleRequest(
+            ClientRequest clientRequest
+    ) {
+        return handleRequest(
+                clientRequest,
+                new ArrayList<>()
+        );
     }
 
     @PostLoad
@@ -137,7 +159,11 @@ public class ReplicaServer {
         ensureCacheStrategyInitialized();
     }
 
-    private void ensureCacheStrategyInitialized() {
+    private synchronized void incrementRequestCount() {
+        countRequests++;
+    }
+
+    private synchronized void ensureCacheStrategyInitialized() {
         if (cacheStrategy != null) {
             return;
         }
@@ -145,20 +171,25 @@ public class ReplicaServer {
         if (cachingAlgorithmType == null) {
             throw new IllegalStateException(
                     "Caching algorithm type is not configured for replica server "
-                            + replicaServerId + "."
+                            + replicaServerId
+                            + "."
             );
         }
 
-        cacheStrategy = createCacheStrategy(cachingAlgorithmType);
+        cacheStrategy =
+                createCacheStrategy(cachingAlgorithmType);
     }
 
     private static CacheStrategy createCacheStrategy(
             CachingAlgorithmType algorithmType
     ) {
         return switch (algorithmType) {
-            case FIFO -> new FIFOAlgorithm(CACHE_CAPACITY);
-            case LFU -> new LFUAlgorithm(CACHE_CAPACITY);
-            case LRU -> new LRUAlgorithm(CACHE_CAPACITY);
+            case FIFO ->
+                    new FIFOAlgorithm(CACHE_CAPACITY);
+            case LFU ->
+                    new LFUAlgorithm(CACHE_CAPACITY);
+            case LRU ->
+                    new LRUAlgorithm(CACHE_CAPACITY);
         };
     }
 
