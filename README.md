@@ -7,6 +7,16 @@ The simulator provides an interactive interface that visualizes how resource req
 
 ---
 
+## Live Demo
+
+**Try the deployed application:** [cdn-simulator.onrender.com](https://cdn-simulator.onrender.com/)
+
+![CDN Simulator Demo](docs/cdn-simulator-demo.png)
+
+The visualization shows requests travelling through edge and replica servers, cache hit/miss states, resource delivery, and request tracing in real time.
+
+---
+
 ## Features
 
 ### Multi-Layer CDN Topology
@@ -275,85 +285,6 @@ The frontend uses the backend-generated trace as the source of truth for CDN rou
 
 ---
 
-## Architecture
-
-The project separates CDN behavior into caching, model, service, API, configuration, and presentation layers.
-
-```text
-src/
-├── main/
-│   ├── java/
-│   │   └── mk/ukim/finki/cdn_simulatorproject/
-│   │       ├── cache/
-│   │       │   ├── cachingAlgorithms/
-│   │       │   │   ├── FIFOAlgorithm.java
-│   │       │   │   ├── LFUAlgorithm.java
-│   │       │   │   └── LRUAlgorithm.java
-│   │       │   ├── CacheStrategy.java
-│   │       │   └── CachingAlgorithmType.java
-│   │       │
-│   │       ├── config/
-│   │       │   └── SecurityConfig.java
-│   │       │
-│   │       ├── dto/
-│   │       │   ├── ClientRequestDTO.java
-│   │       │   ├── HopDTO.java
-│   │       │   ├── RequestTraceDTO.java
-│   │       │   └── ResourceDTO.java
-│   │       │
-│   │       ├── exceptions/
-│   │       │   ├── EdgeServerException.java
-│   │       │   └── ReplicaServerException.java
-│   │       │
-│   │       ├── model/
-│   │       │   ├── ClientRequest.java
-│   │       │   ├── EdgeServer.java
-│   │       │   ├── EdgeServerManager.java
-│   │       │   ├── OriginServer.java
-│   │       │   ├── ReplicaServer.java
-│   │       │   ├── ReplicaServerManager.java
-│   │       │   └── Resource.java
-│   │       │
-│   │       ├── service/
-│   │       │   ├── impl/
-│   │       │   │   ├── CacheServiceImpl.java
-│   │       │   │   └── CDNServiceImpl.java
-│   │       │   ├── CacheService.java
-│   │       │   ├── CDNService.java
-│   │       │   └── SimulationService.java
-│   │       │
-│   │       ├── web/
-│   │       │   ├── CacheController.java
-│   │       │   └── CdnController.java
-│   │       │
-│   │       └── CdnSimulatorProjectApplication.java
-│   │
-│   └── resources/
-│       ├── static/
-│       │   ├── images/
-│       │   ├── img/
-│       │   ├── app.js
-│       │   └── style.css
-│       │
-│       ├── templates/
-│       │   └── index.html
-│       │
-│       └── application.properties
-│
-└── test/
-    └── java/
-        └── mk/ukim/finki/cdn_simulatorproject/
-            ├── CdnSimulatorProjectApplicationTests.java
-            ├── EdgeServerManagerTest.java
-            ├── EdgeServerTest.java
-            ├── FIFOAlgorithmTest.java
-            ├── LFUAlgorithmTest.java
-            ├── LRUAlgorithmTest.java
-            └── OriginServerTest.java
-```
-
----
-
 ## Technologies
 
 | Technology | Purpose |
@@ -376,19 +307,24 @@ src/
 
 ## Automated Tests
 
-The project includes automated tests for the main CDN components.
+The project includes **55 automated tests across 13 test classes**, covering the main caching, routing, service, controller, and topology components.
 
 Current coverage includes:
 
 - Spring application context
-- FIFO eviction behavior
-- LRU eviction behavior
-- LRU access-order updates
-- LFU eviction behavior
+- FIFO eviction and insertion-order behavior
+- LRU eviction and access-order updates
+- LFU eviction and frequency tracking
 - Edge server cache hit and miss flow
-- Least-loaded edge server selection
+- Replica server cache hit and miss flow
+- Least-loaded edge and replica server selection
+- Duplicate server handling
 - Origin resource retrieval
-- Unknown origin resources
+- Cache clearing
+- CDN service routing and delegation
+- Client request simulation and request tracing
+- Controller API responses
+- Invalid input and unknown-resource handling
 
 Run the test suite with:
 
